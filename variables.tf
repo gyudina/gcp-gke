@@ -1,3 +1,7 @@
+variable project {
+  description = "The ID of the project in which the resource belongs."
+}
+
 variable cluster_name {
   description = "The name of the cluster, unique within the project and location."
 }
@@ -7,8 +11,14 @@ variable description {
   default     = ""
 }
 
+variable cluster_labels {
+  description = "The GCE resource labels (a map of key/value pairs) to be applied to the cluster."
+  type        = map
+  default     = {}
+}
+
 variable location {
-  description = "The location (region or zone) in which the cluster master will be created, as well as the default node location. If you specify a zone (such as us-central1-a), the cluster will be a zonal cluster with a single cluster master. If you specify a region (such as us-west1), the cluster will be a regional cluster with multiple masters spread across zones in the region, and with default node locations in those zones as well"
+  description = "The location (region or zone) in which the cluster master will be created, as well as the default node location. If you specify a zone (such as us-central1-a), the cluster will be a zonal cluster with a single cluster master. If you specify a region (such as us-west1), the cluster will be a regional cluster with multiple masters spread across zones in the region, and with default node locations in those zones as well."
 }
 
 variable network {
@@ -19,49 +29,102 @@ variable subnetwork {
   description = "The name or self_link of the Google Compute Engine subnetwork in which the cluster's instances are launched."
 }
 
+variable logging_service {
+  description = "The logging service that the cluster should write logs to. Available options include logging.googleapis.com, logging.googleapis.com/kubernetes (beta), and none"
+  default     = "logging.googleapis.com/kubernetes"
+}
+
+variable monitoring_service {
+  description = "The monitoring service that the cluster should write metrics to. Automatically send metrics from pods in the cluster to the Google Cloud Monitoring API. VM metrics will be collected by Google Compute Engine regardless of this setting Available options include monitoring.googleapis.com, monitoring.googleapis.com/kubernetes (beta) and none."
+  default     = "monitoring.googleapis.com/kubernetes"
+}
+
+variable enable_private_nodes {
+  description = "Nodes have internal IP addresses only."
+  default     = true
+}
+
+variable enable_private_endpoint {
+  description = "The master's internal IP address is used as the cluster endpoint. If set to false the private endpoint is created, but it also creates the public endpoint which allows to add CIDR with external addresses to master authorized networks."
+  default     = false
+}
+
+variable master_ipv4_cidr_block {
+  description = "The IP range in CIDR notation to use for the hosted master network."
+}
+
+variable master_authorized_networks {
+  description = "List of master authorized networks. If none are provided, disallow external access (except the cluster node IPs, which GKE automatically whitelists)."
+  type = list(map(string))
+  default     = []
+}
+
+variable network_policy {
+  description = "Enable network policy addon."
+  default     = true
+}
+
+variable identity_namespace {
+  description = "Workload Identity allows Kubernetes service accounts to act as a user-managed Google IAM Service Account."
+}
+
+variable enable_network_egress_metering {
+  description = "Whether to enable network egress metering for this cluster. If enabled, a daemonset will be created in the cluster to meter network egress traffic."
+}
+
+variable dataset_id {
+  description = "The ID of a BigQuery Dataset."
+}
+
 variable initial_node_count {
   description = "The number of nodes to create in this cluster's default node pool. In regional or multi-zonal clusters, this is the number of nodes per zone. Must be set if node_pool is not set. If you're using google_container_node_pool objects with no default node pool, you'll need to set this to a value of at least 1, alongside setting remove_default_node_pool to true."
   default     = 1
 }
 
-variable cluster_labels {
-  description = "The GCE resource labels (a map of key/value pairs) to be applied to the cluster."
-  type        = map
-  default     = {}
+variable service_account {
+   description = "The service account to be used by the Node VMs. If not specified, the 'default' service account is used." 
+   default = ""
 }
 
-//node_pools
-// node_count (default: 3)
-// machine_type (default: n1-standard-1)
-// disk_size_gb (default: 10)
-// preemptible (default: false)
-// service_account (default: default)
-// local_ssd_count (default: 0)
-// min_node_count (default: 1)
-// max_node_count (default: 3)
-// auto_repair (default: true)
-// auto_upgrade (default: true)
-// metadata (default: {})
+//node_pools defaults:
+// initial_node_count - 1
+// disk_size_gb - 20
+// disk_type - pd-standard
+// image - COS
+// local_ssd_count - 0
+// machine_type - n1-standard-1
+// preemptible - false
+// service_account - default
+// min_node_count - 1
+// max_node_count - 3
+
 variable node_pools {
+  description = "Node pool setting to create"
   type        = list
   default     = []
-  description = "Node pool setting to create"
 }
 
 variable tags {
+  description = "The list of instance tags applied to all nodes. Tags are used to identify valid sources or targets for network firewalls."
   type        = list
   default     = []
-  description = "The list of instance tags applied to all nodes. Tags are used to identify valid sources or targets for network firewalls"
 }
 
 variable labels {
-  description = "The Kubernetes labels (key/value pairs) to be applied to each node"
+  description = "The Kubernetes labels (key/value pairs) to be applied to each node."
   type        = map
   default     = {}
 }
 
 variable metadata {
-  description = "The metadata key/value pairs assigned to instances in the cluster"
+  description = "The metadata key/value pairs assigned to instances in the cluster."
   type        = map
-  default     = {}
+  default     = {disable-legacy-endpoints:true}
 }
+
+variable oauth_scopes {
+  description = "The set of Google API scopes to be made available on all of the node VMs."
+  type        = list
+  default     = ["storage-ro", "logging-write", "monitoring"]   // "storage-ro", "logging-write", "monitoring"; "cloud-platform"
+}
+
