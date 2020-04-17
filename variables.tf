@@ -86,45 +86,34 @@ variable service_account {
    default = ""
 }
 
-//node_pools defaults:
-// initial_node_count - 1
-// disk_size_gb - 20
-// disk_type - pd-standard
-// image - COS
-// local_ssd_count - 0
-// machine_type - n1-standard-1
-// preemptible - false
-// service_account - default
-// min_node_count - 1
-// max_node_count - 3
-
-variable node_pools {
-  description = "Node pool setting to create"
-  type        = list
-  default     = []
-}
-
-variable tags {
-  description = "The list of instance tags applied to all nodes. Tags are used to identify valid sources or targets for network firewalls."
-  type        = list
-  default     = []
-}
-
-variable labels {
-  description = "The Kubernetes labels (key/value pairs) to be applied to each node."
-  type        = map
-  default     = {}
-}
-
 variable metadata {
   description = "The metadata key/value pairs assigned to instances in the cluster."
   type        = map
   default     = {disable-legacy-endpoints:true}
 }
 
-variable oauth_scopes {
-  description = "The set of Google API scopes to be made available on all of the node VMs."
-  type        = list
-  default     = ["storage-ro", "logging-write", "monitoring"]   // "storage-ro", "logging-write", "monitoring"; "cloud-platform"
+//node_pools 
+
+variable node_pools {
+  type        = list(map(string))
+  description = "List of maps containing node pools"
+
+  default = [
+    {
+      name = "default-pool"
+    },
+  ]
 }
 
+variable node_pools_labels {
+  type        = map(map(string))
+  description = "Map of maps containing node labels by node-pool name"
+
+  default = {}
+}
+
+variable node_pools_metadata {
+  type        = map(map(string))
+  description = "The metadata key/value pairs assigned to instances in the cluster."
+  default     = {}
+}

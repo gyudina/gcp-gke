@@ -1,3 +1,9 @@
+locals {
+    // Build a map of maps of node pools from a list of objects
+  node_pool_names = [for np in toset(var.node_pools) : np.name]
+  node_pools      = zipmap(local.node_pool_names, tolist(toset(var.node_pools)))
+}
+
 resource "google_container_cluster" "gke_private_cluster" {
   provider = google-beta
 
@@ -79,37 +85,37 @@ resource "google_container_cluster" "gke_private_cluster" {
 }
 
 resource "google_container_node_pool" "gke_private_cluster_node_pool" {
-  count = length(var.node_pools)
-
-  name       = "${var.cluster_name}-pool-${count.index}"
+  name       = each.key
+  for_each = local.node_pools
+  
   location   = var.location
   cluster    = google_container_cluster.gke_private_cluster.name
 
-  initial_node_count = lookup(var.node_pools[count.index], "initial_node_count", 1)
+  initial_node_count = lookup(each.value, "initial_node_count", 1)
 
   node_config {
-    disk_size_gb    = lookup(var.node_pools[count.index], "disk_size_gb", 20)
-    disk_type       = lookup(var.node_pools[count.index], "disk_type", "pd-standard")
-    image_type      = lookup(var.node_pools[count.index], "image", "COS")
-    local_ssd_count = lookup(var.node_pools[count.index], "local_ssd_count", 0)
-    machine_type    = lookup(var.node_pools[count.index], "machine_type", "n1-standard-2")
-    preemptible     = lookup(var.node_pools[count.index], "preemptible", false)
-    service_account = lookup(var.node_pools[count.index], "service_account", "default")
-    labels          = var.labels
-    tags            = var.tags
-    metadata        = var.metadata
-    oauth_scopes    = var.oauth_scopes
+    disk_size_gb    = lookup(each.value, "disk_size_gb", 20)
+    disk_type       = lookup(each.value, "disk_type", "pd-standard")
+    image_type      = lookup(each.value, "image_type", "COS")
+    local_ssd_count = lookup(each.value, "local_ssd_count", 0)
+    machine_type    = lookup(each.value, "machine_type", "n1-standard-2")
+    preemptible     = lookup(each.value, "preemptible", false)
+    service_account = lookup(each.value, "service_account", "default")
+    tags            = compact(split(",",lookup(each.value, "tags", "")))
+    oauth_scopes    = compact(split(",",lookup(each.value, "oauth_scopes", "storage-ro,logging-write,monitoring")))   //https://cloud.google.com/sdk/gcloud/reference/container/node-pools/create
+    labels          = lookup(var.node_pools_labels, lookup(each.value, "name", ""), {})
+    metadata        = merge(lookup(var.node_pools_metadata, lookup(each.value, "name", ""), {}), var.metadata)
 
     guest_accelerator {
-      type = lookup(var.node_pools[count.index], "guest_accelerator_type", "")
-      count = lookup(var.node_pools[count.index], "guest_accelerator_count", 0)
+      type = lookup(each.value, "guest_accelerator_type", "")
+      count = lookup(each.value, "guest_accelerator_count", 0)
     }
 
   }
 
   autoscaling {
-    min_node_count = lookup(var.node_pools[count.index], "min_node_count", 1)
-    max_node_count = lookup(var.node_pools[count.index], "max_node_count", 3)
+    min_node_count = lookup(each.value, "min_node_count", 1)
+    max_node_count = lookup(each.value, "max_node_count", 3)
   }
 
   management {
